@@ -2,8 +2,9 @@
 
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import type { User } from "@prisma/client";
 
-export async function syncUser() {
+export async function syncUser(): Promise<User | null> {
   const { userId } = await auth();
   if (!userId) return null;
 

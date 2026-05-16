@@ -1,12 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from "lucide-react";
+import type { DashboardStats } from "@/actions/problems";
 
-interface Stats {
-  total: number;
-  easy: number;
-  medium: number;
-  hard: number;
-}
+type DifficultyStats = Pick<
+  DashboardStats,
+  "total" | "easy" | "medium" | "hard"
+>;
 
 function Bar({
   label,
@@ -42,7 +41,7 @@ function Bar({
   );
 }
 
-export function DifficultyChart({ stats }: { stats: Stats | null }) {
+export function DifficultyChart({ stats }: { stats: DifficultyStats | null }) {
   if (!stats || stats.total === 0) return null;
 
   return (

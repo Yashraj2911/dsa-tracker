@@ -3,20 +3,10 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Users, Crown, ArrowRight } from "lucide-react";
+import type { MyGroupMembership } from "@/types/prisma";
 
 interface GroupCardProps {
-  membership: {
-    role: string;
-    joinedAt: Date;
-    group: {
-      id: string;
-      name: string;
-      description: string | null;
-      createdAt: Date;
-      owner: { id: string; name: string | null };
-      _count: { members: number };
-    };
-  };
+  membership: MyGroupMembership;
   currentUserId: string;
 }
 

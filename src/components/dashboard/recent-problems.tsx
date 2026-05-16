@@ -3,23 +3,12 @@ import { formatDistanceToNow } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { Code2, ExternalLink } from "lucide-react";
-
-type RecentProblem = {
-  id: string;
-  updatedAt: Date;
-  problem: {
-    title: string;
-    difficulty: string;
-    slug: string;
-    url: string;
-  };
-  solutions: { language: string }[];
-};
+import type { UserProblemWithProblem } from "@/types/prisma";
 
 export function RecentProblems({
   problems,
 }: {
-  problems: RecentProblem[];
+  problems: UserProblemWithProblem[];
 }) {
   return (
     <Card>

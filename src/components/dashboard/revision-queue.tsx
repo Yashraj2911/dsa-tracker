@@ -2,16 +2,13 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { RefreshCw } from "lucide-react";
+import type { RevisionQueueItem } from "@/types/prisma";
 
-type RevisionItem = {
-  id: string;
-  problem: {
-    title: string;
-    difficulty: string;
-  };
-};
-
-export function RevisionQueue({ problems }: { problems: RevisionItem[] }) {
+export function RevisionQueue({
+  problems,
+}: {
+  problems: RevisionQueueItem[];
+}) {
   return (
     <Card>
       <CardHeader className="border-b border-border/50">

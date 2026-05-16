@@ -5,6 +5,27 @@ import { randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { syncUser } from "./users";
 import type { CreateGroupInput } from "@/lib/validations";
+import type { Group, GroupMember } from "@prisma/client";
+import {
+  groupWithMembersInclude,
+  myGroupMembershipInclude,
+  groupByInviteCodeInclude,
+  groupSharedProblemInclude,
+  groupActivityInclude,
+  memberProfileInclude,
+  memberRecentSolutionInclude,
+  type GroupWithMembersPayload,
+  type GroupMemberWithUser,
+  type GroupMemberWithStats,
+  type GroupWithMembersResult,
+  type MyGroupMembership,
+  type GroupByInviteCode,
+  type GroupMemberUserId,
+  type UserProblemCountByUser,
+  type GroupSharedProblem,
+  type GroupActivityItem,
+  type MemberProfileResult,
+} from "@/types/prisma";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -12,7 +33,10 @@ function generateInviteCode(): string {
   return randomBytes(4).toString("hex").toUpperCase();
 }
 
-async function requireMembership(groupId: string, userId: string) {
+async function requireMembership(
+  groupId: string,
+  userId: string
+): Promise<GroupMember> {
   const membership = await prisma.groupMember.findUnique({
     where: { groupId_userId: { groupId, userId } },
   });
@@ -22,25 +46,20 @@ async function requireMembership(groupId: string, userId: string) {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
-export async function getMyGroups() {
+export async function getMyGroups(): Promise<MyGroupMembership[]> {
   const user = await syncUser();
   if (!user) return [];
 
   return prisma.groupMember.findMany({
     where: { userId: user.id },
-    include: {
-      group: {
-        include: {
-          owner: { select: { id: true, name: true } },
-          _count: { select: { members: true } },
-        },
-      },
-    },
+    include: myGroupMembershipInclude,
     orderBy: { joinedAt: "desc" },
   });
 }
 
-export async function getGroupWithMembers(groupId: string) {
+export async function getGroupWithMembers(
+  groupId: string
+): Promise<GroupWithMembersResult | null> {
   const user = await syncUser();
   if (!user) return null;
 
@@ -49,22 +68,23 @@ export async function getGroupWithMembers(groupId: string) {
   });
   if (!membership) return null;
 
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
-    include: {
-      owner: { select: { id: true, name: true, email: true } },
-      members: {
-        include: { user: { select: { id: true, name: true, email: true } } },
-        orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
-      },
-    },
-  });
+  const group: GroupWithMembersPayload | null =
+    await prisma.group.findUnique({
+      where: { id: groupId },
+      include: groupWithMembersInclude,
+    });
 
   if (!group) return null;
 
-  const memberIds = group.members.map((m) => m.userId);
+  const members: GroupMemberWithUser[] = group.members;
+  const memberIds: string[] = members.map(
+    (member: GroupMemberWithUser) => member.userId
+  );
 
-  const [problemCounts, revisionCounts] = await Promise.all([
+  const [problemCounts, revisionCounts]: [
+    UserProblemCountByUser[],
+    UserProblemCountByUser[],
+  ] = await Promise.all([
     prisma.userProblem.groupBy({
       by: ["userId"],
       where: { userId: { in: memberIds } },
@@ -77,14 +97,26 @@ export async function getGroupWithMembers(groupId: string) {
     }),
   ]);
 
-  const problemCountMap = new Map(problemCounts.map((p) => [p.userId, p._count.id]));
-  const revisionCountMap = new Map(revisionCounts.map((p) => [p.userId, p._count.id]));
+  const problemCountMap = new Map<string, number>(
+    problemCounts.map((row: UserProblemCountByUser) => [
+      row.userId,
+      row._count.id,
+    ])
+  );
+  const revisionCountMap = new Map<string, number>(
+    revisionCounts.map((row: UserProblemCountByUser) => [
+      row.userId,
+      row._count.id,
+    ])
+  );
 
-  const membersWithStats = group.members.map((m) => ({
-    ...m,
-    problemCount: problemCountMap.get(m.userId) ?? 0,
-    revisionCount: revisionCountMap.get(m.userId) ?? 0,
-  }));
+  const membersWithStats: GroupMemberWithStats[] = members.map(
+    (member: GroupMemberWithUser): GroupMemberWithStats => ({
+      ...member,
+      problemCount: problemCountMap.get(member.userId) ?? 0,
+      revisionCount: revisionCountMap.get(member.userId) ?? 0,
+    })
+  );
 
   return {
     ...group,
@@ -95,7 +127,9 @@ export async function getGroupWithMembers(groupId: string) {
   };
 }
 
-export async function getGroupSharedProblems(groupId: string) {
+export async function getGroupSharedProblems(
+  groupId: string
+): Promise<GroupSharedProblem[]> {
   const user = await syncUser();
   if (!user) return [];
 
@@ -104,29 +138,26 @@ export async function getGroupSharedProblems(groupId: string) {
   });
   if (!membership) return [];
 
-  const members = await prisma.groupMember.findMany({
+  const members: GroupMemberUserId[] = await prisma.groupMember.findMany({
     where: { groupId },
     select: { userId: true },
   });
-  const memberIds = members.map((m) => m.userId);
+  const memberIds: string[] = members.map(
+    (member: GroupMemberUserId) => member.userId
+  );
 
   return prisma.userProblem.findMany({
     where: { userId: { in: memberIds } },
-    include: {
-      problem: true,
-      user: { select: { id: true, name: true } },
-      solutions: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: { language: true, createdAt: true },
-      },
-    },
+    include: groupSharedProblemInclude,
     orderBy: { updatedAt: "desc" },
     take: 100,
   });
 }
 
-export async function getGroupActivity(groupId: string, limit = 25) {
+export async function getGroupActivity(
+  groupId: string,
+  limit = 25
+): Promise<GroupActivityItem[]> {
   const user = await syncUser();
   if (!user) return [];
 
@@ -135,28 +166,26 @@ export async function getGroupActivity(groupId: string, limit = 25) {
   });
   if (!membership) return [];
 
-  const members = await prisma.groupMember.findMany({
+  const members: GroupMemberUserId[] = await prisma.groupMember.findMany({
     where: { groupId },
     select: { userId: true },
   });
-  const memberIds = members.map((m) => m.userId);
+  const memberIds: string[] = members.map(
+    (member: GroupMemberUserId) => member.userId
+  );
 
   return prisma.solution.findMany({
     where: { userId: { in: memberIds } },
-    include: {
-      user: { select: { id: true, name: true } },
-      userProblem: {
-        include: {
-          problem: { select: { id: true, title: true, difficulty: true } },
-        },
-      },
-    },
+    include: groupActivityInclude,
     orderBy: { createdAt: "desc" },
     take: limit,
   });
 }
 
-export async function getMemberProfile(groupId: string, targetUserId: string) {
+export async function getMemberProfile(
+  groupId: string,
+  targetUserId: string
+): Promise<MemberProfileResult | null> {
   const user = await syncUser();
   if (!user) return null;
 
@@ -166,7 +195,7 @@ export async function getMemberProfile(groupId: string, targetUserId: string) {
     }),
     prisma.groupMember.findUnique({
       where: { groupId_userId: { groupId, userId: targetUserId } },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: memberProfileInclude,
     }),
   ]);
 
@@ -179,13 +208,7 @@ export async function getMemberProfile(groupId: string, targetUserId: string) {
     }),
     prisma.solution.findMany({
       where: { userId: targetUserId },
-      include: {
-        userProblem: {
-          include: {
-            problem: { select: { title: true, difficulty: true } },
-          },
-        },
-      },
+      include: memberRecentSolutionInclude,
       orderBy: { createdAt: "desc" },
       take: 5,
     }),
@@ -201,12 +224,11 @@ export async function getMemberProfile(groupId: string, targetUserId: string) {
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
-export async function createGroup(data: CreateGroupInput) {
+export async function createGroup(data: CreateGroupInput): Promise<Group> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 
   let inviteCode = generateInviteCode();
-  // Collision guard (extremely unlikely but correct)
   while (await prisma.group.findUnique({ where: { inviteCode } })) {
     inviteCode = generateInviteCode();
   }
@@ -227,7 +249,9 @@ export async function createGroup(data: CreateGroupInput) {
   return group;
 }
 
-export async function joinGroup(inviteCode: string) {
+export async function joinGroup(
+  inviteCode: string
+): Promise<{ group: Group; alreadyMember: boolean }> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -248,7 +272,7 @@ export async function joinGroup(inviteCode: string) {
   return { group, alreadyMember: false };
 }
 
-export async function leaveGroup(groupId: string) {
+export async function leaveGroup(groupId: string): Promise<void> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -265,7 +289,7 @@ export async function leaveGroup(groupId: string) {
   revalidatePath("/groups");
 }
 
-export async function deleteGroup(groupId: string) {
+export async function deleteGroup(groupId: string): Promise<void> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -279,7 +303,10 @@ export async function deleteGroup(groupId: string) {
   revalidatePath("/groups");
 }
 
-export async function removeGroupMember(groupId: string, targetUserId: string) {
+export async function removeGroupMember(
+  groupId: string,
+  targetUserId: string
+): Promise<void> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -298,9 +325,22 @@ export async function removeGroupMember(groupId: string, targetUserId: string) {
   revalidatePath(`/groups/${groupId}`);
 }
 
-export async function getGroupByInviteCode(inviteCode: string) {
+export async function getGroupByInviteCode(
+  inviteCode: string
+): Promise<GroupByInviteCode | null> {
   return prisma.group.findUnique({
     where: { inviteCode },
-    include: { _count: { select: { members: true } } },
+    include: groupByInviteCodeInclude,
   });
 }
+
+// Re-export types for components
+export type {
+  MyGroupMembership,
+  GroupWithMembersResult,
+  GroupMemberWithStats,
+  GroupSharedProblem,
+  GroupActivityItem,
+  MemberProfileResult,
+  MemberRecentSolution,
+} from "@/types/prisma";

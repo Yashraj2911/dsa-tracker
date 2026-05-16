@@ -5,17 +5,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Code2, TrendingUp, Star, RefreshCw } from "lucide-react";
+import type { DashboardStats } from "@/actions/problems";
 
-interface Stats {
-  total: number;
-  easy: number;
-  medium: number;
-  hard: number;
-  revisionCount: number;
-  starredCount: number;
-}
-
-export function StatsCards({ stats }: { stats: Stats | null }) {
+export function StatsCards({ stats }: { stats: DashboardStats | null }) {
   if (!stats) return null;
 
   const cards = [

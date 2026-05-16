@@ -4,11 +4,12 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { syncUser } from "./users";
 import type { AddSolutionInput } from "@/lib/validations";
+import type { Solution } from "@prisma/client";
 
 export async function addSolution(
   userProblemId: string,
   data: AddSolutionInput
-) {
+): Promise<Solution> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -42,7 +43,7 @@ export async function addSolution(
 export async function updateSolution(
   solutionId: string,
   data: Partial<AddSolutionInput>
-) {
+): Promise<Solution> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -66,7 +67,7 @@ export async function updateSolution(
   return updated;
 }
 
-export async function deleteSolution(solutionId: string) {
+export async function deleteSolution(solutionId: string): Promise<void> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 

@@ -2,24 +2,10 @@ import { formatDistanceToNow } from "date-fns";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { Code2, RefreshCw, Star } from "lucide-react";
 import Link from "next/link";
-
-type SharedProblem = {
-  id: string;
-  needsRevision: boolean;
-  starred: boolean;
-  updatedAt: Date;
-  user: { id: string; name: string | null };
-  problem: {
-    title: string;
-    difficulty: string;
-    tags: string[];
-    url: string;
-  };
-  solutions: { language: string; createdAt: Date }[];
-};
+import type { GroupSharedProblem } from "@/types/prisma";
 
 interface SharedProblemsTableProps {
-  problems: SharedProblem[];
+  problems: GroupSharedProblem[];
   currentUserId: string;
 }
 

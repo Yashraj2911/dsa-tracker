@@ -11,9 +11,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { getMemberProfile } from "@/actions/groups";
+import type { MemberProfileResult } from "@/types/prisma";
 import { Code2, RefreshCw, Clock, Calendar } from "lucide-react";
-
-type Profile = Awaited<ReturnType<typeof getMemberProfile>>;
 
 interface MemberProfileDialogProps {
   groupId: string;
@@ -28,7 +27,7 @@ export function MemberProfileDialog({
   open,
   onClose,
 }: MemberProfileDialogProps) {
-  const [profile, setProfile] = useState<Profile>(null);
+  const [profile, setProfile] = useState<MemberProfileResult | null>(null);
   const [, startTransition] = useTransition();
 
   useEffect(() => {

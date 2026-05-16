@@ -10,19 +10,10 @@ import { Users, Crown, UserMinus, Code2, RefreshCw } from "lucide-react";
 import { removeGroupMember, leaveGroup } from "@/actions/groups";
 import { useRouter } from "next/navigation";
 import { MemberProfileDialog } from "./member-profile-dialog";
-
-type MemberWithStats = {
-  id: string;
-  role: string;
-  joinedAt: Date;
-  userId: string;
-  problemCount: number;
-  revisionCount: number;
-  user: { id: string; name: string | null; email: string | null };
-};
+import type { GroupMemberWithStats } from "@/types/prisma";
 
 interface MemberListProps {
-  members: MemberWithStats[];
+  members: GroupMemberWithStats[];
   groupId: string;
   isOwner: boolean;
   currentUserId: string;

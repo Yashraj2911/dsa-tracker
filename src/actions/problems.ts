@@ -4,6 +4,24 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { syncUser } from "./users";
 import type { AddProblemInput } from "@/lib/validations";
+import type { UserProblem, Problem } from "@prisma/client";
+import {
+  userProblemWithProblemInclude,
+  userProblemDetailInclude,
+  revisionQueueInclude,
+  type UserProblemWithProblem,
+  type UserProblemDetail,
+  type RevisionQueueItem,
+} from "@/types/prisma";
+
+export type DashboardStats = {
+  total: number;
+  easy: number;
+  medium: number;
+  hard: number;
+  revisionCount: number;
+  starredCount: number;
+};
 
 export async function getProblems(filters?: {
   difficulty?: string;
@@ -11,7 +29,7 @@ export async function getProblems(filters?: {
   starred?: boolean;
   language?: string;
   search?: string;
-}) {
+}): Promise<UserProblemWithProblem[]> {
   const user = await syncUser();
   if (!user) return [];
 
@@ -39,31 +57,29 @@ export async function getProblems(filters?: {
           solutions: { some: { language: filters.language } },
         }),
     },
-    include: {
-      problem: true,
-      solutions: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-      },
-    },
+    include: userProblemWithProblemInclude,
     orderBy: { updatedAt: "desc" },
   });
 }
 
-export async function getProblem(userProblemId: string) {
+export async function getProblem(
+  userProblemId: string
+): Promise<UserProblemDetail | null> {
   const user = await syncUser();
   if (!user) return null;
 
   return prisma.userProblem.findFirst({
     where: { id: userProblemId, userId: user.id },
-    include: {
-      problem: true,
-      solutions: { orderBy: { createdAt: "asc" } },
-    },
+    include: userProblemDetailInclude,
   });
 }
 
-export async function addProblem(data: AddProblemInput) {
+export async function addProblem(
+  data: AddProblemInput
+): Promise<
+  | { userProblem: UserProblem; alreadyExists: true }
+  | { userProblem: UserProblem & { problem: Problem }; alreadyExists: false }
+> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -96,7 +112,9 @@ export async function addProblem(data: AddProblemInput) {
   return { userProblem, alreadyExists: false };
 }
 
-export async function toggleRevision(userProblemId: string) {
+export async function toggleRevision(
+  userProblemId: string
+): Promise<UserProblem> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -116,7 +134,9 @@ export async function toggleRevision(userProblemId: string) {
   return updated;
 }
 
-export async function toggleStarred(userProblemId: string) {
+export async function toggleStarred(
+  userProblemId: string
+): Promise<UserProblem> {
   const user = await syncUser();
   if (!user) throw new Error("Unauthorized");
 
@@ -136,7 +156,7 @@ export async function toggleStarred(userProblemId: string) {
   return updated;
 }
 
-export async function getDashboardStats() {
+export async function getDashboardStats(): Promise<DashboardStats | null> {
   const user = await syncUser();
   if (!user) return null;
 
@@ -161,32 +181,39 @@ export async function getDashboardStats() {
   return { total, easy, medium, hard, revisionCount, starredCount };
 }
 
-export async function getRecentProblems(limit = 6) {
+export async function getRecentProblems(
+  limit = 6
+): Promise<UserProblemWithProblem[]> {
   const user = await syncUser();
   if (!user) return [];
 
   return prisma.userProblem.findMany({
     where: { userId: user.id },
-    include: {
-      problem: true,
-      solutions: { orderBy: { createdAt: "desc" }, take: 1 },
-    },
+    include: userProblemWithProblemInclude,
     orderBy: { updatedAt: "desc" },
     take: limit,
   });
 }
 
-export async function getRevisionQueue(limit = 5) {
+export async function getRevisionQueue(
+  limit = 5
+): Promise<RevisionQueueItem[]> {
   const user = await syncUser();
   if (!user) return [];
 
   return prisma.userProblem.findMany({
     where: { userId: user.id, needsRevision: true },
-    include: { problem: true },
+    include: revisionQueueInclude,
     orderBy: { updatedAt: "asc" },
     take: limit,
   });
 }
+
+export type {
+  UserProblemWithProblem,
+  UserProblemDetail,
+  RevisionQueueItem,
+} from "@/types/prisma";
 
 export async function fetchProblemMetadata(url: string) {
   const { extractSlugFromUrl, fetchLeetCodeProblem } = await import(

@@ -1,19 +1,10 @@
 import { formatDistanceToNow } from "date-fns";
 import { DifficultyBadge } from "@/components/problems/difficulty-badge";
 import { Code2, Zap } from "lucide-react";
-
-type ActivityItem = {
-  id: string;
-  language: string;
-  createdAt: Date;
-  user: { id: string; name: string | null };
-  userProblem: {
-    problem: { id: string; title: string; difficulty: string };
-  };
-};
+import type { GroupActivityItem } from "@/types/prisma";
 
 interface ActivityFeedProps {
-  items: ActivityItem[];
+  items: GroupActivityItem[];
 }
 
 function UserAvatar({ name }: { name: string | null }) {

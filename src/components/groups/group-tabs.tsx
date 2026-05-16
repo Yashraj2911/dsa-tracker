@@ -4,30 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SharedProblemsTable } from "./shared-problems-table";
 import { ActivityFeed } from "./activity-feed";
 import { Code2, Zap } from "lucide-react";
-
-type SharedProblem = {
-  id: string;
-  needsRevision: boolean;
-  starred: boolean;
-  updatedAt: Date;
-  user: { id: string; name: string | null };
-  problem: { title: string; difficulty: string; tags: string[]; url: string };
-  solutions: { language: string; createdAt: Date }[];
-};
-
-type ActivityItem = {
-  id: string;
-  language: string;
-  createdAt: Date;
-  user: { id: string; name: string | null };
-  userProblem: {
-    problem: { id: string; title: string; difficulty: string };
-  };
-};
+import type { GroupSharedProblem, GroupActivityItem } from "@/types/prisma";
 
 interface GroupTabsProps {
-  problems: SharedProblem[];
-  activity: ActivityItem[];
+  problems: GroupSharedProblem[];
+  activity: GroupActivityItem[];
   currentUserId: string;
 }
 
