@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id      String  @id @default(cuid())
+  clerkId String  @unique
+  name    String?
+  email   String? @unique
+
+  createdAt DateTime @default(now())
+
+  solutions    Solution[]
+  userProblems UserProblem[]
+  ownedGroups  Group[]       @relation("GroupOwner")
+  memberships  GroupMember[]
+}
+
+model Problem {
+  id         String   @id @default(cuid())
+  platform   String
+  slug       String
+  title      String
+  difficulty String
+  tags       String[]
+  url        String   @unique
+  createdAt  DateTime @default(now())
+
+  userProblems UserProblem[]
+}
+
+model UserProblem {
+  id            String   @id @default(cuid())
+  userId        String
+  problemId     String
+  needsRevision Boolean  @default(false)
+  starred       Boolean  @default(false)
+  totalAttempts Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id])
+  problem   Problem    @relation(fields: [problemId], references: [id])
+  solutions Solution[]
+
+  @@unique([userId, problemId])
+}
+
+model Solution {
+  id            String   @id @default(cuid())
+  userId        String
+  userProblemId String
+  title         String
+  language      String
+  code          String   @db.Text
+  notes         String?  @db.Text
+  solveTime     Int?
+  createdAt     DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id])
+  userProblem UserProblem @relation(fields: [userProblemId], references: [id])
+}
+
+// ─── Groups ───────────────────────────────────────────────────────────────────
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  inviteCode  String   @unique
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner   User          @relation("GroupOwner", fields: [ownerId], references: [id])
+  members GroupMember[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  /// "owner" | "member"
+  role     String   @default("member")
+  joinedAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId])
+}
