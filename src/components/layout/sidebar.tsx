@@ -8,10 +8,10 @@ import {
   Code2,
   Star,
   RefreshCw,
-  Zap,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AppLogo } from "@/components/brand/app-logo";
 
 const navItems = [
   {
@@ -62,13 +62,10 @@ export function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-56 flex-col border-r border-sidebar-border bg-sidebar">
       {/* Logo */}
-      <div className="flex h-14 items-center gap-2.5 border-b border-sidebar-border px-4">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
-          <Zap className="h-3.5 w-3.5 text-primary-foreground" />
-        </div>
-        <span className="font-semibold text-sm tracking-tight">
-          DSA Tracker
-        </span>
+      <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+        <Link href="/">
+          <AppLogo variant="inline" />
+        </Link>
       </div>
 
       {/* Navigation */}

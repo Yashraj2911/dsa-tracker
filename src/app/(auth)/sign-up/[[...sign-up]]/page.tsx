@@ -1,19 +1,21 @@
 import { SignUp } from "@clerk/nextjs";
-import { Zap } from "lucide-react";
+import { AppLogo } from "@/components/brand/app-logo";
+import type { Metadata } from "next";
+import { APP_CONFIG } from "@/lib/config";
+
+export const metadata: Metadata = {
+  title: "Sign Up",
+  description: `Create a ${APP_CONFIG.name} account and start mastering DSA.`,
+};
 
 export default function SignUpPage() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
-      <div className="mb-8 flex flex-col items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
-          <Zap className="h-5 w-5 text-primary-foreground" />
-        </div>
-        <div className="text-center">
-          <h1 className="text-xl font-semibold">DSA Tracker</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Create an account to get started
-          </p>
-        </div>
+      <div className="mb-8">
+        <AppLogo variant="stacked" />
+        <p className="mt-3 text-center text-sm text-muted-foreground">
+          Create your account to get started
+        </p>
       </div>
       <SignUp />
     </div>

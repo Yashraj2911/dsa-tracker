@@ -4,6 +4,7 @@ import { joinGroup, getGroupByInviteCode } from "@/actions/groups";
 import { syncUser } from "@/actions/users";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppLogo } from "@/components/brand/app-logo";
 import { Users, ArrowRight, CheckCircle } from "lucide-react";
 
 export default async function JoinGroupPage({
@@ -25,6 +26,9 @@ export default async function JoinGroupPage({
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <Card className="w-full max-w-sm text-center">
           <CardHeader>
+            <div className="flex justify-center mb-2">
+              <AppLogo variant="icon" />
+            </div>
             <CardTitle className="text-base">Invalid Invite</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
