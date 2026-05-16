@@ -51,15 +51,20 @@ model UserProblem {
 }
 
 model Solution {
-  id            String   @id @default(cuid())
-  userId        String
-  userProblemId String
-  title         String
-  language      String
-  code          String   @db.Text
-  notes         String?  @db.Text
-  solveTime     Int?
-  createdAt     DateTime @default(now())
+  id                  String   @id @default(cuid())
+  userId              String
+  userProblemId       String
+  title               String
+  language            String
+  code                String   @db.Text
+  notes               String?  @db.Text
+  solveTime           Int?
+  runtimeMs           Int?
+  runtimeBeatsPercent Float?
+  memoryBeatsPercent  Float?
+  timeComplexity      String?
+  spaceComplexity     String?
+  createdAt           DateTime @default(now())
 
   user        User        @relation(fields: [userId], references: [id])
   userProblem UserProblem @relation(fields: [userProblemId], references: [id])
