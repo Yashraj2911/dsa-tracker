@@ -10,36 +10,11 @@ import { SolutionNotesEditor } from "./solution-notes-editor";
 import { SolutionForm } from "./solution-form";
 import { SUPPORTED_LANGUAGES } from "@/constants/languages";
 import type { SolutionRecord } from "@/types/solution";
-import {
-  Copy,
-  Check,
-  Trash2,
-  Calendar,
-  Pencil,
-} from "lucide-react";
+import { Trash2, Calendar, Pencil } from "lucide-react";
+import { CopyCodeButton } from "./copy-code-button";
 import { deleteSolution } from "@/actions/solutions";
 import { toast } from "sonner";
 import { useTransition } from "react";
-
-function CopyButton({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <Button variant="ghost" size="icon-sm" onClick={handleCopy}>
-      {copied ? (
-        <Check className="h-3.5 w-3.5 text-emerald-400" />
-      ) : (
-        <Copy className="h-3.5 w-3.5" />
-      )}
-    </Button>
-  );
-}
 
 function DeleteButton({
   solutionId,
@@ -150,7 +125,7 @@ export function SolutionPanel({
           >
             <Pencil className="h-3.5 w-3.5" />
           </Button>
-          <CopyButton code={solution.code} />
+          <CopyCodeButton code={solution.code} />
           <DeleteButton solutionId={solution.id} onDeleted={onDeleted} />
         </div>
       </div>

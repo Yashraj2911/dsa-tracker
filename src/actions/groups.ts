@@ -14,6 +14,7 @@ import {
   groupActivityInclude,
   memberProfileInclude,
   memberRecentSolutionInclude,
+  groupMemberSolutionInclude,
   type GroupWithMembersPayload,
   type GroupMemberWithUser,
   type GroupMemberWithStats,
@@ -25,7 +26,14 @@ import {
   type GroupSharedProblem,
   type GroupActivityItem,
   type MemberProfileResult,
+  type GroupMemberProblemRow,
 } from "@/types/prisma";
+import { computeSolutionScore, getProblemHighlights } from "@/lib/scoring";
+import type {
+  GroupProblemEntry,
+  MemberProblemEntry,
+  MemberSolution,
+} from "@/types/group";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -222,6 +230,149 @@ export async function getMemberProfile(
   };
 }
 
+/**
+ * Problem-centric group query.
+ * Returns one entry per unique problem, with all member solutions aggregated.
+ * Only members who have at least one solution appear in member lists.
+ * Members are sorted by their best (highest-scoring) solution.
+ */
+export async function getGroupProblems(
+  groupId: string
+): Promise<GroupProblemEntry[]> {
+  const user = await syncUser();
+  if (!user) return [];
+
+  const membership = await prisma.groupMember.findUnique({
+    where: { groupId_userId: { groupId, userId: user.id } },
+  });
+  if (!membership) return [];
+
+  const memberRows: GroupMemberUserId[] = await prisma.groupMember.findMany({
+    where: { groupId },
+    select: { userId: true },
+  });
+  const memberIds = memberRows.map((m: GroupMemberUserId) => m.userId);
+
+  const rows: GroupMemberProblemRow[] = await prisma.userProblem.findMany({
+    where: { userId: { in: memberIds } },
+    include: groupMemberSolutionInclude,
+  });
+
+  // Aggregate by unique problem
+  const byProblem = new Map<
+    string,
+    {
+      title: string;
+      difficulty: string;
+      url: string;
+      memberEntries: MemberProblemEntry[];
+      latestActivity: Date | null;
+    }
+  >();
+
+  for (const row of rows) {
+    const { problem, user: rowUser, solutions } = row;
+
+    if (!byProblem.has(problem.id)) {
+      byProblem.set(problem.id, {
+        title: problem.title,
+        difficulty: problem.difficulty,
+        url: problem.url,
+        memberEntries: [],
+        latestActivity: null,
+      });
+    }
+
+    // Skip members with no solutions
+    if (solutions.length === 0) continue;
+
+    const entry = byProblem.get(problem.id)!;
+
+    const mappedSolutions: MemberSolution[] = solutions.map((sol) => ({
+      solutionId: sol.id,
+      title: sol.title,
+      language: sol.language,
+      code: sol.code,
+      notes: sol.notes,
+      solveTime: sol.solveTime,
+      runtimeMs: sol.runtimeMs,
+      runtimeBeatsPercent: sol.runtimeBeatsPercent,
+      memoryBeatsPercent: sol.memoryBeatsPercent,
+      timeComplexity: sol.timeComplexity,
+      spaceComplexity: sol.spaceComplexity,
+      score: computeSolutionScore(problem.difficulty, {
+        solveTime: sol.solveTime,
+        runtimeBeatsPercent: sol.runtimeBeatsPercent,
+        memoryBeatsPercent: sol.memoryBeatsPercent,
+        timeComplexity: sol.timeComplexity,
+        spaceComplexity: sol.spaceComplexity,
+      }),
+      isBest: false,
+      solvedAt: new Date(sol.createdAt),
+    }));
+
+    mappedSolutions.sort((a, b) => b.score - a.score);
+    const bestScore = mappedSolutions[0]?.score ?? 0;
+    if (mappedSolutions[0]) mappedSolutions[0].isBest = true;
+
+    // Track latest activity (solutions already ordered desc by createdAt)
+    const latest = new Date(solutions[0].createdAt);
+    if (!entry.latestActivity || latest > entry.latestActivity) {
+      entry.latestActivity = latest;
+    }
+
+    entry.memberEntries.push({
+      userId: rowUser.id,
+      userName: rowUser.name,
+      userProblemId: row.id,
+      isCurrentUser: rowUser.id === user.id,
+      solutions: mappedSolutions,
+      score: bestScore,
+    });
+  }
+
+  return [...byProblem.entries()]
+    .map(([problemId, data]) => {
+      const sorted = [...data.memberEntries].sort(
+        (a, b) => b.score - a.score
+      );
+      const winner =
+        sorted[0] && sorted[0].score > 0
+          ? {
+              userId: sorted[0].userId,
+              userName: sorted[0].userName,
+              score: sorted[0].score,
+            }
+          : null;
+
+      const { fastest, mostOptimized } = getProblemHighlights(sorted);
+
+      return {
+        problemId,
+        title: data.title,
+        difficulty: data.difficulty,
+        url: data.url,
+        members: sorted,
+        participantCount: sorted.length,
+        latestActivity: data.latestActivity,
+        winner,
+        fastestSolver: fastest,
+        mostOptimizedSolver: mostOptimized
+          ? {
+              userId: mostOptimized.userId,
+              userName: mostOptimized.userName,
+              runtimeBeats: mostOptimized.runtimeBeats,
+            }
+          : null,
+      } satisfies GroupProblemEntry;
+    })
+    .sort((a, b) => {
+      const ta = a.latestActivity?.getTime() ?? 0;
+      const tb = b.latestActivity?.getTime() ?? 0;
+      return tb - ta;
+    });
+}
+
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export async function createGroup(data: CreateGroupInput): Promise<Group> {
@@ -344,3 +495,5 @@ export type {
   MemberProfileResult,
   MemberRecentSolution,
 } from "@/types/prisma";
+
+export type { GroupProblemEntry, MemberProblemEntry, MemberSolution } from "@/types/group";

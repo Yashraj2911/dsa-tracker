@@ -1,5 +1,6 @@
 import { Zap, Rocket, Brain, Clock, Timer, HardDrive } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatSolveTime } from "@/lib/scoring";
 
 export type SolutionMetricsDisplay = {
   solveTime?: number | null;
@@ -54,10 +55,10 @@ export function PerformanceMetricsBadges({
   if (metrics.solveTime !== null && metrics.solveTime !== undefined) {
     runtimeBadges.push(
       <MetricBadge
-        key="time"
+        key="solve-time"
         icon={Clock}
-        label=""
-        value={`${metrics.solveTime}m`}
+        label="Solved in"
+        value={formatSolveTime(metrics.solveTime)}
         className="border-blue-500/20 bg-blue-500/10 text-blue-300"
       />
     );

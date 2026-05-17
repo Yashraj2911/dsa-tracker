@@ -2,9 +2,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   getGroupWithMembers,
-  getGroupSharedProblems,
+  getGroupProblems,
   getGroupActivity,
 } from "@/actions/groups";
+import { computeLeaderboard } from "@/lib/scoring";
 import { GroupHeader } from "@/components/groups/group-header";
 import { GroupTabs } from "@/components/groups/group-tabs";
 import { MemberList } from "@/components/groups/member-list";
@@ -17,13 +18,20 @@ export default async function GroupDetailPage({
 }) {
   const { id } = await params;
 
-  const [group, problems, activity] = await Promise.all([
+  const [group, groupProblems, activity] = await Promise.all([
     getGroupWithMembers(id),
-    getGroupSharedProblems(id),
+    getGroupProblems(id),
     getGroupActivity(id),
   ]);
 
   if (!group) notFound();
+
+  const membersList = group.members.map((m) => ({
+    userId: m.userId,
+    userName: m.user.name,
+  }));
+
+  const leaderboard = computeLeaderboard(groupProblems, membersList);
 
   return (
     <div className="min-h-full px-8 py-8">
@@ -37,24 +45,15 @@ export default async function GroupDetailPage({
       </nav>
 
       {/* Header */}
-      <GroupHeader
-        group={group}
-        isOwner={group.isOwner}
-      />
+      <GroupHeader group={group} isOwner={group.isOwner} />
 
       {/* Content grid */}
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Main — tabs */}
         <div className="lg:col-span-2">
           <GroupTabs
-            problems={problems.map((p) => ({
-              ...p,
-              updatedAt: new Date(p.updatedAt),
-              solutions: p.solutions.map((s) => ({
-                ...s,
-                createdAt: new Date(s.createdAt),
-              })),
-            }))}
+            groupProblems={groupProblems}
+            leaderboard={leaderboard}
             activity={activity.map((a) => ({
               ...a,
               createdAt: new Date(a.createdAt),

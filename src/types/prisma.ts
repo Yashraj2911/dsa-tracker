@@ -121,6 +121,36 @@ export type MemberProfileResult = {
   recentSolutions: MemberRecentSolution[];
 };
 
+// ─── Group problem-centric query (aggregated by unique problem) ───────────────
+
+export const groupMemberSolutionInclude = {
+  solutions: {
+    orderBy: { createdAt: "desc" as const },
+    select: {
+      id: true,
+      title: true,
+      language: true,
+      code: true,
+      notes: true,
+      solveTime: true,
+      runtimeMs: true,
+      runtimeBeatsPercent: true,
+      memoryBeatsPercent: true,
+      timeComplexity: true,
+      spaceComplexity: true,
+      createdAt: true,
+    },
+  },
+  user: { select: { id: true, name: true } },
+  problem: {
+    select: { id: true, title: true, difficulty: true, url: true },
+  },
+} satisfies Prisma.UserProblemInclude;
+
+export type GroupMemberProblemRow = Prisma.UserProblemGetPayload<{
+  include: typeof groupMemberSolutionInclude;
+}>;
+
 // ─── Problem queries ──────────────────────────────────────────────────────────
 
 export const userProblemWithProblemInclude = {
